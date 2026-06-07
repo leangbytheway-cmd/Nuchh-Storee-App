@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+  />
+  <meta name="theme-color" content="#f4f4f4" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Business App" />
+
+  <title>Business App</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <main class="app">
+    <header class="top">
+      <div>
+        <h1>Business App</h1>
+        <p>Orders, stock, and reports</p>
+      </div>
+    </header>
+
+    <section class="stats">
+      <div class="stat-card">
+        <span>Today Sales</span>
+        <strong id="todayRevenue">$0</strong>
+      </div>
+
+      <div class="stat-card">
+        <span>Month Sales</span>
+        <strong id="monthRevenue">$0</strong>
+      </div>
+    </section>
+
+    <nav class="nav">
+      <button class="active" onclick="showPage('order', this)">Order</button>
+      <button onclick="showPage('stockAdd', this)">Add Stock</button>
+      <button onclick="showPage('stockView', this); loadStock();">Stock</button>
+      <button onclick="showPage('reports', this); loadReports();">Reports</button>
+      <button onclick="showPage('history', this)">History</button>
+    </nav>
+
+    <section id="order" class="page active">
+      <div class="card">
+        <h2>Add Order</h2>
+
+        <label>Customer Name</label>
+        <input id="customer" placeholder="Dara" autocomplete="name" />
+
+        <label>Phone Number</label>
+        <input id="phone" placeholder="012345678" inputmode="tel" />
+
+        <label>Product</label>
+        <input id="product" placeholder="HoneyA" />
+
+        <div class="grid-2">
+          <div>
+            <label>Qty</label>
+            <input id="qty" type="number" placeholder="2" inputmode="numeric" />
+          </div>
+
+          <div>
+            <label>Unit Price</label>
+            <input id="price" type="number" placeholder="15" inputmode="decimal" />
+          </div>
+        </div>
+
+        <label>Address</label>
+        <input id="address" placeholder="TK" />
+
+        <label>Delivery Method</label>
+        <select id="delivery">
+          <option value="D2D">D2D</option>
+          <option value="VET">VET</option>
+          <option value="J&T">J&T</option>
+          <option value="Capitol">Capitol</option>
+        </select>
+
+        <button class="primary" onclick="submitOrder()">Submit Order</button>
+
+        <div id="orderResult"></div>
+      </div>
+    </section>
+
+    <section id="stockAdd" class="page">
+      <div class="card">
+        <h2>Add Stock</h2>
+
+        <label>Product</label>
+        <input id="stockProduct" placeholder="HoneyA" />
+
+        <label>Quantity to Add</label>
+        <input id="stockQty" type="number" placeholder="50" inputmode="numeric" />
+
+        <button class="primary" onclick="submitStock()">Update Stock</button>
+
+        <div id="stockAddResult"></div>
+      </div>
+    </section>
+
+    <section id="stockView" class="page">
+      <div class="card">
+        <h2>Current Stock</h2>
+        <div id="stockList" class="list">Tap Stock to refresh.</div>
+      </div>
+    </section>
+
+    <section id="reports" class="page">
+      <div class="card">
+        <h2>Reports</h2>
+
+        <div class="report-box">
+          <span>Today</span>
+          <strong id="todayDetail">$0</strong>
+          <p id="todayMeta">Orders: 0 • Units: 0</p>
+        </div>
+
+        <div class="report-box">
+          <span>This Month</span>
+          <strong id="monthDetail">$0</strong>
+          <p id="monthMeta">Orders: 0 • Units: 0</p>
+        </div>
+
+        <h3>Top Products</h3>
+        <div id="topProducts" class="list"></div>
+      </div>
+    </section>
+
+    <section id="history" class="page">
+      <div class="card">
+        <h2>Customer History</h2>
+
+        <label>Phone Number</label>
+        <input id="historyPhone" placeholder="012345678" inputmode="tel" />
+
+        <button class="primary" onclick="loadHistory()">Search</button>
+
+        <div id="historyResult"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
