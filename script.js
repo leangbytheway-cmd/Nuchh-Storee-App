@@ -1,7 +1,26 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbyyy94-2wrXcgr4r3tB3egQSfPLcmsDkoqRWJUB34a6N7PvlEQJUXxkT46MTx7QnYlNSg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbyIIR8jF88OQsw4rAsQ2y3YRSroeA-yF7jPjRHlc_s2KNtgIPVr-c9hEyYYlayZwjLYng/exec";
 
+let historySearchTimer = null;
 let stockProducts = [];
 let orderItems = [];
+
+function showLoading(text = "Loading...") {
+  const overlay = document.getElementById("loadingOverlay");
+  const loadingText = document.getElementById("loadingText");
+
+  if (!overlay || !loadingText) return;
+
+  loadingText.innerText = text;
+  overlay.classList.add("active");
+}
+
+function hideLoading() {
+  const overlay = document.getElementById("loadingOverlay");
+
+  if (!overlay) return;
+
+  overlay.classList.remove("active");
+}
 
 document.addEventListener("DOMContentLoaded", () => {
   loadDashboard();
@@ -104,6 +123,7 @@ async function submitStock() {
   const product = document.getElementById("stockProduct").value.trim();
   const qty = document.getElementById("stockQty").value;
 
+  showLoading("Updating stock...");
   showMessage("stockAddResult", "Updating stock...");
 
   try {
@@ -130,6 +150,8 @@ async function submitStock() {
     await loadStockProducts();
   } catch (err) {
     showMessage("stockAddResult", "⚠️ Failed to update stock.", "error");
+  } finally {
+    hideLoading();
   }
 }
 
@@ -238,6 +260,7 @@ async function submitOrder() {
     return;
   }
 
+  showLoading("Saving order...");
   showMessage("orderResult", "Saving order...");
 
   try {
@@ -279,6 +302,8 @@ ${result.confirmation}`;
     await loadStockProducts();
   } catch (err) {
     showMessage("orderResult", "⚠️ Failed to save order.", "error");
+  } finally {
+    hideLoading();
   }
 }
 
@@ -289,6 +314,7 @@ ${result.confirmation}`;
 async function loadStock() {
   const box = document.getElementById("stockList");
   box.innerHTML = "Loading...";
+  showLoading("Loading stock...");
 
   try {
     const result = await apiGet({ action: "stock" });
@@ -314,6 +340,8 @@ async function loadStock() {
     renderProductSuggestions();
   } catch (err) {
     box.innerHTML = "⚠️ Failed to load stock.";
+  } finally {
+    hideLoading();
   }
 }
 
@@ -322,6 +350,8 @@ async function loadStock() {
 ========================= */
 
 async function loadReports() {
+  showLoading("Loading reports...");
+
   try {
     const today = await apiGet({ action: "report", type: "today" });
     const month = await apiGet({ action: "report", type: "month" });
@@ -354,6 +384,8 @@ async function loadReports() {
     }
   } catch (err) {
     document.getElementById("topProducts").innerHTML = "⚠️ Failed to load reports.";
+  } finally {
+    hideLoading();
   }
 }
 
@@ -361,50 +393,137 @@ async function loadReports() {
    HISTORY
 ========================= */
 
-async function loadHistory() {
-  const phone = document.getElementById("historyPhone").value.trim();
+async function loadOrdersHistory() {
+  const searchInput = document.getElementById("historySearch");
+  const search = searchInput ? searchInput.value.trim() : "";
 
-  showMessage("historyResult", "Searching...");
+  const box = document.getElementById("historyResult");
+  box.innerHTML = "Loading orders...";
+  showLoading(search ? "Searching orders..." : "Loading history...");
 
   try {
     const result = await apiGet({
-      action: "history",
-      phone
+      action: "ordersHistory",
+      search
     });
 
     if (!result.success) {
-      showMessage("historyResult", "⚠️ " + result.message, "error");
+      box.innerHTML = `<div class="message error">⚠️ ${escapeHtml(result.message)}</div>`;
       return;
     }
 
-    const history = result.history;
-
-    if (history.orderCount === 0) {
-      showMessage("historyResult", "No order history found.", "error");
-      return;
-    }
-
-    let text =
-`👤 Customer History
-
-Name: ${history.name}
-Phone: ${history.phone}
-Orders: ${history.orderCount}
-Total Spent: $${history.totalSpent}
-
-Recent Orders:
-`;
-
-    history.recentOrders.forEach(order => {
-      text += `\n${order.orderId} - $${order.orderTotal} (${order.delivery})\n`;
-
-      order.items.forEach(item => {
-        text += `- ${item.product} x${item.qty} = $${item.lineTotal}\n`;
-      });
-    });
-
-    showMessage("historyResult", text);
+    renderOrdersHistory(result.orders || []);
   } catch (err) {
-    showMessage("historyResult", "⚠️ Failed to load history.", "error");
+    box.innerHTML = `<div class="message error">⚠️ Failed to load order history.</div>`;
+  } finally {
+    hideLoading();
   }
+}
+
+function filterHistoryTyping() {
+  clearTimeout(historySearchTimer);
+
+  historySearchTimer = setTimeout(() => {
+    loadOrdersHistory();
+  }, 400);
+}
+
+function renderOrdersHistory(orders) {
+  const box = document.getElementById("historyResult");
+
+  if (!orders.length) {
+    box.innerHTML = `<div class="message error">No orders found.</div>`;
+    return;
+  }
+
+  box.innerHTML = orders.map((order, index) => {
+    const dateText = formatDate(order.date);
+
+    const itemsHtml = order.items.length
+      ? order.items.map(item => `
+          <div class="history-product">
+            <span>${escapeHtml(item.product)} x${item.qty}</span>
+            <strong>$${item.lineTotal}</strong>
+          </div>
+        `).join("")
+      : `<div class="small">No product details found.</div>`;
+
+    return `
+      <div class="history-card">
+        <button class="history-main" onclick="toggleOrderDetail(${index})">
+          <div>
+            <strong>${escapeHtml(order.customer)}</strong>
+            <span>${escapeHtml(order.phone)}</span>
+            <small>${escapeHtml(dateText)}</small>
+          </div>
+
+          <div class="history-total">
+            <strong>$${order.orderTotal}</strong>
+            <span>${escapeHtml(order.orderId)}</span>
+          </div>
+        </button>
+
+        <div id="orderDetail-${index}" class="history-detail">
+          <div class="detail-row">
+            <span>Order ID</span>
+            <strong>${escapeHtml(order.orderId)}</strong>
+          </div>
+
+          <div class="detail-row">
+            <span>Name</span>
+            <strong>${escapeHtml(order.customer)}</strong>
+          </div>
+
+          <div class="detail-row">
+            <span>Phone</span>
+            <strong>${escapeHtml(order.phone)}</strong>
+          </div>
+
+          <div class="detail-row">
+            <span>Address</span>
+            <strong>${escapeHtml(order.address)}</strong>
+          </div>
+
+          <div class="detail-row">
+            <span>Delivery</span>
+            <strong>${escapeHtml(order.delivery)}</strong>
+          </div>
+
+          <div class="detail-products">
+            <h3>Products</h3>
+            ${itemsHtml}
+          </div>
+
+          <div class="detail-total">
+            <span>Total</span>
+            <strong>$${order.orderTotal}</strong>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function toggleOrderDetail(index) {
+  const detail = document.getElementById(`orderDetail-${index}`);
+
+  if (!detail) return;
+
+  detail.classList.toggle("active");
+}
+
+function formatDate(dateValue) {
+  if (!dateValue) return "";
+
+  const date = new Date(dateValue);
+
+  if (isNaN(date.getTime())) {
+    return String(dateValue);
+  }
+
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  });
 }

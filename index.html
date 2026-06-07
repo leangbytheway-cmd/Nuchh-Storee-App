@@ -8,17 +8,31 @@
   />
   <meta name="theme-color" content="#f4f4f4" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="Business App" />
+  <meta name="apple-mobile-web-app-title" content="Nuchh Storee App" />
 
-  <title>Business App</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" href="icon-192.png">
+
+    <link rel="apple-touch-icon" href="icon-512.png">
+
+    <meta name="apple-mobile-web-app-title" content="Nuchh Storee App">
+    <meta name="theme-color" content="#f4f4f4">
+    
+  <title>Nuchh Storee App</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
+    <div id="loadingOverlay" class="loading-overlay">
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <div id="loadingText">Loading...</div>
+  </div>
+</div>
   <main class="app">
     <header class="top">
       <div>
-        <h1>Business App</h1>
+        <h1>Nuchh Storee App</h1>
         <p>Orders, stock, and reports</p>
       </div>
     </header>
@@ -40,7 +54,7 @@
       <button onclick="showPage('stockAdd', this)">Add Stock</button>
       <button onclick="showPage('stockView', this); loadStock();">Stock</button>
       <button onclick="showPage('reports', this); loadReports();">Reports</button>
-      <button onclick="showPage('history', this)">History</button>
+      <button onclick="showPage('history', this); loadOrdersHistory();">History</button>
     </nav>
 
         <section id="order" class="page active">
@@ -150,17 +164,23 @@
     </section>
 
     <section id="history" class="page">
-      <div class="card">
-        <h2>Customer History</h2>
+  <div class="card">
+    <h2>Order History</h2>
 
-        <label>Phone Number</label>
-        <input id="historyPhone" placeholder="012345678" inputmode="tel" />
+    <label>Search Order</label>
+    <input
+      id="historySearch"
+      placeholder="Search name, phone, order ID..."
+      oninput="filterHistoryTyping()"
+    />
 
-        <button class="primary" onclick="loadHistory()">Search</button>
+    <button class="primary" onclick="loadOrdersHistory()">Refresh History</button>
 
-        <div id="historyResult"></div>
-      </div>
-    </section>
+    <div id="historyResult" class="history-list">
+      Loading orders...
+    </div>
+  </div>
+</section>
   </main>
 
   <script src="script.js"></script>
