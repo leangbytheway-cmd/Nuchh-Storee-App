@@ -43,8 +43,8 @@
       <button onclick="showPage('history', this)">History</button>
     </nav>
 
-    <section id="order" class="page active">
-      <div class="card">
+        <section id="order" class="page active">
+    <div class="card">
         <h2>Add Order</h2>
 
         <label>Customer Name</label>
@@ -53,58 +53,73 @@
         <label>Phone Number</label>
         <input id="phone" placeholder="012345678" inputmode="tel" />
 
-        <label>Product</label>
-        <input id="product" list="productList" placeholder="Choose product" oninput="autoFillPrice()" />
-
-        <datalist id="productList"></datalist>
-
-        <div class="grid-2">
-          <div>
-            <label>Qty</label>
-            <input id="qty" type="number" placeholder="2" inputmode="numeric" />
-          </div>
-
-          <div>
-            <label>Unit Price</label>
-            <input id="price" type="number" placeholder="15" inputmode="decimal" />
-          </div>
-        </div>
-
         <label>Address</label>
         <input id="address" placeholder="TK" />
 
         <label>Delivery Method</label>
         <select id="delivery">
-          <option value="D2D">D2D</option>
-          <option value="VET">VET</option>
-          <option value="J&T">J&T</option>
-          <option value="Capitol">Capitol</option>
+        <option value="D2D">D2D</option>
+        <option value="GRAB">GRAB</option>
+        <option value="VET">VET</option>
+        <option value="J&T">J&T</option>
+        <option value="Capitol">Capitol</option>
+        <option value="Walk-In">Walk-In</option>
         </select>
+
+        <hr class="divider" />
+
+        <h3>Add Product</h3>
+
+        <label>Product</label>
+        <input id="itemProduct" list="productList" placeholder="Choose product" />
+
+        <datalist id="productList"></datalist>
+
+        <div class="grid-2">
+        <div>
+            <label>Qty</label>
+            <input id="itemQty" type="number" placeholder="2" inputmode="numeric" />
+        </div>
+
+        <div>
+            <label>Unit Price</label>
+            <input id="itemPrice" type="number" placeholder="15" inputmode="decimal" />
+        </div>
+        </div>
+
+        <button class="secondary-btn" onclick="addItemToOrder()">Add Product</button>
+
+        <div class="order-summary">
+        <h3>Order Items</h3>
+        <div id="orderItemsList" class="list">No products added yet.</div>
+
+        <div class="order-total">
+            <span>Total</span>
+            <strong id="orderTotal">$0</strong>
+        </div>
+        </div>
 
         <button class="primary" onclick="submitOrder()">Submit Order</button>
 
         <div id="orderResult"></div>
-      </div>
+    </div>
     </section>
 
     <section id="stockAdd" class="page">
-      <div class="card">
-        <h2>Add Stock</h2>
+  <div class="card">
+    <h2>Add Stock</h2>
 
-        <label>Product</label>
-        <input id="stockProduct" placeholder="HoneyA" />
+    <label>Product</label>
+    <input id="stockProduct" placeholder="HoneyA" />
 
-        <label>Quantity to Add</label>
-        <input id="stockQty" type="number" placeholder="50" inputmode="numeric" />
+    <label>Quantity to Add</label>
+    <input id="stockQty" type="number" placeholder="50" inputmode="numeric" />
 
-        <label>Unit Price</label>
-        <input id="stockUnitPrice" type="number" placeholder="15" inputmode="decimal" />
+    <button class="primary" onclick="submitStock()">Update Stock</button>
 
-        <button class="primary" onclick="submitStock()">Update Stock</button>
-
-        <div id="stockAddResult"></div>
-      </div>
-    </section>
+    <div id="stockAddResult"></div>
+  </div>
+</section>
 
     <section id="stockView" class="page">
       <div class="card">

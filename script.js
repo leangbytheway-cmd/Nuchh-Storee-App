@@ -1,8 +1,11 @@
+const API_URL = "https://script.google.com/macros/s/AKfycbwFB7sHTznJ1RNZ_4uinVF_gjClE3hudtDLo8_Jg7Yfplk9bZhKnBnG6_dlphYnhSsumw/exec";
+
 let stockProducts = [];
-const API_URL = "https://script.google.com/macros/s/AKfycbzPWcmemIEJCvkvyQYuGFE5EOnofBWut1r0vQGBytGiq-5ukXhwUet4BA1wVh5e_2Xi3w/exec";
+let orderItems = [];
 
 document.addEventListener("DOMContentLoaded", () => {
   loadDashboard();
+  loadStockProducts();
 });
 
 function showPage(id, button) {
@@ -46,11 +49,14 @@ async function apiPost(body) {
   return response.json();
 }
 
+/* =========================
+   DASHBOARD
+========================= */
+
 async function loadDashboard() {
   try {
     const today = await apiGet({ action: "report", type: "today" });
     const month = await apiGet({ action: "report", type: "month" });
-    const stock = await apiGet({ action: "stock" });
 
     if (today.success) {
       document.getElementById("todayRevenue").innerText =
@@ -61,9 +67,17 @@ async function loadDashboard() {
       document.getElementById("monthRevenue").innerText =
         "$" + month.report.revenue;
     }
+  } catch (err) {
+    console.log(err);
+  }
+}
 
-    if (stock.success) {
-      stockProducts = stock.stock;
+async function loadStockProducts() {
+  try {
+    const result = await apiGet({ action: "stock" });
+
+    if (result.success) {
+      stockProducts = result.stock || [];
       renderProductSuggestions();
     }
   } catch (err) {
@@ -82,22 +96,13 @@ function renderProductSuggestions() {
     .join("");
 }
 
-function autoFillPrice() {
-  const productName = document.getElementById("product").value.trim();
-
-  const selectedProduct = stockProducts.find(item =>
-    item.product.toLowerCase() === productName.toLowerCase()
-  );
-
-  if (selectedProduct) {
-    document.getElementById("price").value = selectedProduct.unitPrice || 0;
-  }
-}
+/* =========================
+   ADD STOCK
+========================= */
 
 async function submitStock() {
   const product = document.getElementById("stockProduct").value.trim();
   const qty = document.getElementById("stockQty").value;
-  const unitPrice = document.getElementById("stockUnitPrice").value;
 
   showMessage("stockAddResult", "Updating stock...");
 
@@ -105,8 +110,7 @@ async function submitStock() {
     const result = await apiPost({
       action: "addStock",
       product,
-      qty,
-      unitPrice
+      qty
     });
 
     if (!result.success) {
@@ -116,31 +120,135 @@ async function submitStock() {
 
     showMessage(
       "stockAddResult",
-      `✅ Stock Updated\n\nProduct: ${result.result.product}\nCurrent Stock: ${result.result.currentStock}\nUnit Price: $${result.result.unitPrice}`
+      `✅ Stock Updated\n\nProduct: ${result.result.product}\nCurrent Stock: ${result.result.currentStock}`
     );
 
+    document.getElementById("stockProduct").value = "";
+    document.getElementById("stockQty").value = "";
+
     await loadDashboard();
+    await loadStockProducts();
   } catch (err) {
     showMessage("stockAddResult", "⚠️ Failed to update stock.", "error");
   }
 }
 
+/* =========================
+   MULTI-PRODUCT ORDER
+========================= */
+
+function addItemToOrder() {
+  const product = document.getElementById("itemProduct").value.trim();
+  const qty = Number(document.getElementById("itemQty").value);
+  const unitPrice = Number(document.getElementById("itemPrice").value);
+
+  if (!product || isNaN(qty) || qty <= 0 || isNaN(unitPrice) || unitPrice < 0) {
+    showMessage("orderResult", "⚠️ Please enter valid product, qty, and unit price.", "error");
+    return;
+  }
+
+  const stockItem = stockProducts.find(item =>
+    item.product.toLowerCase() === product.toLowerCase()
+  );
+
+  if (!stockItem) {
+    showMessage("orderResult", "⚠️ This product is not inside Stock.", "error");
+    return;
+  }
+
+  const existingQty = orderItems
+    .filter(item => item.product.toLowerCase() === product.toLowerCase())
+    .reduce((sum, item) => sum + item.qty, 0);
+
+  if (existingQty + qty > Number(stockItem.currentStock)) {
+    showMessage(
+      "orderResult",
+      `⚠️ Not enough stock for ${product}.\nCurrent Stock: ${stockItem.currentStock}\nAlready in order: ${existingQty}\nTrying to add: ${qty}`,
+      "error"
+    );
+    return;
+  }
+
+  orderItems.push({
+    product,
+    qty,
+    unitPrice,
+    lineTotal: qty * unitPrice
+  });
+
+  document.getElementById("itemProduct").value = "";
+  document.getElementById("itemQty").value = "";
+  document.getElementById("itemPrice").value = "";
+  document.getElementById("orderResult").innerHTML = "";
+
+  renderOrderItems();
+}
+
+function removeOrderItem(index) {
+  orderItems.splice(index, 1);
+  renderOrderItems();
+}
+
+function renderOrderItems() {
+  const list = document.getElementById("orderItemsList");
+  const totalBox = document.getElementById("orderTotal");
+
+  if (!orderItems.length) {
+    list.innerHTML = "No products added yet.";
+    totalBox.innerText = "$0";
+    return;
+  }
+
+  let total = 0;
+
+  list.innerHTML = orderItems.map((item, index) => {
+    total += item.lineTotal;
+
+    return `
+      <div class="cart-item">
+        <div>
+          <strong>${escapeHtml(item.product)}</strong>
+          <span>x${item.qty} • $${item.unitPrice} each</span>
+        </div>
+
+        <div class="cart-right">
+          <strong>$${item.lineTotal}</strong>
+          <button type="button" class="remove-btn" onclick="removeOrderItem(${index})">Remove</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  totalBox.innerText = "$" + total;
+}
+
 async function submitOrder() {
-  const order = {
-    action: "createOrder",
-    customer: document.getElementById("customer").value.trim(),
-    phone: document.getElementById("phone").value.trim(),
-    product: document.getElementById("product").value.trim(),
-    qty: document.getElementById("qty").value,
-    price: document.getElementById("price").value,
-    address: document.getElementById("address").value.trim(),
-    delivery: document.getElementById("delivery").value
-  };
+  const customer = document.getElementById("customer").value.trim();
+  const phone = document.getElementById("phone").value.trim();
+  const address = document.getElementById("address").value.trim();
+  const delivery = document.getElementById("delivery").value;
+
+  if (!customer || !phone || !address || !delivery) {
+    showMessage("orderResult", "⚠️ Please fill customer, phone, address, and delivery.", "error");
+    return;
+  }
+
+  if (!orderItems.length) {
+    showMessage("orderResult", "⚠️ Please add at least one product.", "error");
+    return;
+  }
 
   showMessage("orderResult", "Saving order...");
 
   try {
-    const result = await apiPost(order);
+    const result = await apiPost({
+      action: "createOrder",
+      customer,
+      phone,
+      address,
+      delivery,
+      items: orderItems
+    });
 
     if (!result.success) {
       showMessage("orderResult", "⚠️ " + result.message, "error");
@@ -150,18 +258,33 @@ async function submitOrder() {
     const text =
 `✅ Order Recorded
 
-Remaining Stock: ${result.result.remainingStock}
+Order ID: ${result.result.orderId}
+Order Total: $${result.result.orderTotal}
 
 Customer Message:
 
 ${result.confirmation}`;
 
     showMessage("orderResult", text);
-    loadDashboard();
+
+    document.getElementById("customer").value = "";
+    document.getElementById("phone").value = "";
+    document.getElementById("address").value = "";
+    document.getElementById("delivery").value = "D2D";
+
+    orderItems = [];
+    renderOrderItems();
+
+    await loadDashboard();
+    await loadStockProducts();
   } catch (err) {
     showMessage("orderResult", "⚠️ Failed to save order.", "error");
   }
 }
+
+/* =========================
+   VIEW STOCK
+========================= */
 
 async function loadStock() {
   const box = document.getElementById("stockList");
@@ -181,15 +304,22 @@ async function loadStock() {
     }
 
     box.innerHTML = result.stock.map(item => `
-    <div class="list-item">
+      <div class="list-item">
         <span>${escapeHtml(item.product)}</span>
-        <strong>${item.currentStock} pcs • $${item.unitPrice}</strong>
-    </div>
+        <strong>${item.currentStock}</strong>
+      </div>
     `).join("");
+
+    stockProducts = result.stock || [];
+    renderProductSuggestions();
   } catch (err) {
     box.innerHTML = "⚠️ Failed to load stock.";
   }
 }
+
+/* =========================
+   REPORTS
+========================= */
 
 async function loadReports() {
   try {
@@ -227,6 +357,10 @@ async function loadReports() {
   }
 }
 
+/* =========================
+   HISTORY
+========================= */
+
 async function loadHistory() {
   const phone = document.getElementById("historyPhone").value.trim();
 
@@ -262,7 +396,11 @@ Recent Orders:
 `;
 
     history.recentOrders.forEach(order => {
-      text += `- ${order.product} x${order.qty} = $${order.total} (${order.delivery})\n`;
+      text += `\n${order.orderId} - $${order.orderTotal} (${order.delivery})\n`;
+
+      order.items.forEach(item => {
+        text += `- ${item.product} x${item.qty} = $${item.lineTotal}\n`;
+      });
     });
 
     showMessage("historyResult", text);
