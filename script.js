@@ -1,3 +1,4 @@
+let stockProducts = [];
 const API_URL = "https://script.google.com/macros/s/AKfycbzPWcmemIEJCvkvyQYuGFE5EOnofBWut1r0vQGBytGiq-5ukXhwUet4BA1wVh5e_2Xi3w/exec";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -49,6 +50,7 @@ async function loadDashboard() {
   try {
     const today = await apiGet({ action: "report", type: "today" });
     const month = await apiGet({ action: "report", type: "month" });
+    const stock = await apiGet({ action: "stock" });
 
     if (today.success) {
       document.getElementById("todayRevenue").innerText =
@@ -59,14 +61,43 @@ async function loadDashboard() {
       document.getElementById("monthRevenue").innerText =
         "$" + month.report.revenue;
     }
+
+    if (stock.success) {
+      stockProducts = stock.stock;
+      renderProductSuggestions();
+    }
   } catch (err) {
     console.log(err);
+  }
+}
+
+function renderProductSuggestions() {
+  const productList = document.getElementById("productList");
+
+  if (!productList) return;
+
+  productList.innerHTML = stockProducts
+    .filter(item => Number(item.currentStock) > 0)
+    .map(item => `<option value="${escapeHtml(item.product)}"></option>`)
+    .join("");
+}
+
+function autoFillPrice() {
+  const productName = document.getElementById("product").value.trim();
+
+  const selectedProduct = stockProducts.find(item =>
+    item.product.toLowerCase() === productName.toLowerCase()
+  );
+
+  if (selectedProduct) {
+    document.getElementById("price").value = selectedProduct.unitPrice || 0;
   }
 }
 
 async function submitStock() {
   const product = document.getElementById("stockProduct").value.trim();
   const qty = document.getElementById("stockQty").value;
+  const unitPrice = document.getElementById("stockUnitPrice").value;
 
   showMessage("stockAddResult", "Updating stock...");
 
@@ -74,7 +105,8 @@ async function submitStock() {
     const result = await apiPost({
       action: "addStock",
       product,
-      qty
+      qty,
+      unitPrice
     });
 
     if (!result.success) {
@@ -84,10 +116,10 @@ async function submitStock() {
 
     showMessage(
       "stockAddResult",
-      `✅ Stock Updated\n\nProduct: ${result.result.product}\nCurrent Stock: ${result.result.currentStock}`
+      `✅ Stock Updated\n\nProduct: ${result.result.product}\nCurrent Stock: ${result.result.currentStock}\nUnit Price: $${result.result.unitPrice}`
     );
 
-    loadDashboard();
+    await loadDashboard();
   } catch (err) {
     showMessage("stockAddResult", "⚠️ Failed to update stock.", "error");
   }
@@ -149,10 +181,10 @@ async function loadStock() {
     }
 
     box.innerHTML = result.stock.map(item => `
-      <div class="list-item">
+    <div class="list-item">
         <span>${escapeHtml(item.product)}</span>
-        <strong>${item.currentStock}</strong>
-      </div>
+        <strong>${item.currentStock} pcs • $${item.unitPrice}</strong>
+    </div>
     `).join("");
   } catch (err) {
     box.innerHTML = "⚠️ Failed to load stock.";

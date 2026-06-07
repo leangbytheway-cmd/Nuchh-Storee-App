@@ -54,7 +54,9 @@
         <input id="phone" placeholder="012345678" inputmode="tel" />
 
         <label>Product</label>
-        <input id="product" placeholder="HoneyA" />
+        <input id="product" list="productList" placeholder="Choose product" oninput="autoFillPrice()" />
+
+        <datalist id="productList"></datalist>
 
         <div class="grid-2">
           <div>
@@ -94,6 +96,9 @@
 
         <label>Quantity to Add</label>
         <input id="stockQty" type="number" placeholder="50" inputmode="numeric" />
+
+        <label>Unit Price</label>
+        <input id="stockUnitPrice" type="number" placeholder="15" inputmode="decimal" />
 
         <button class="primary" onclick="submitStock()">Update Stock</button>
 
