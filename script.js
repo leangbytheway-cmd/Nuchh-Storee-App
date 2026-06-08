@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbyIIR8jF88OQsw4rAsQ2y3YRSroeA-yF7jPjRHlc_s2KNtgIPVr-c9hEyYYlayZwjLYng/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwUtx4lH2OFbMSmzYwYDbOPupDU99JgAD0uyH9222hgOaiThnsnpCscG_npkCBEs-3uLw/exec";
 
 let historySearchTimer = null;
 let stockProducts = [];
@@ -22,9 +22,14 @@ function hideLoading() {
   overlay.classList.remove("active");
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  loadDashboard();
-  loadStockProducts();
+document.addEventListener("DOMContentLoaded", async () => {
+  showLoading("Loading Dashboard...");
+
+  try {
+    await loadDashboard();
+  } finally {
+    hideLoading();
+  }
 });
 
 function showPage(id, button) {
@@ -74,18 +79,18 @@ async function apiPost(body) {
 
 async function loadDashboard() {
   try {
-    const today = await apiGet({ action: "report", type: "today" });
-    const month = await apiGet({ action: "report", type: "month" });
+    const result = await apiGet({ action: "dashboard" });
 
-    if (today.success) {
-      document.getElementById("todayRevenue").innerText =
-        "$" + today.report.revenue;
-    }
+    if (!result.success) return;
 
-    if (month.success) {
-      document.getElementById("monthRevenue").innerText =
-        "$" + month.report.revenue;
-    }
+    document.getElementById("todayRevenue").innerText =
+      "$" + result.todayReport.revenue;
+
+    document.getElementById("monthRevenue").innerText =
+      "$" + result.monthReport.revenue;
+
+    stockProducts = result.stock || [];
+    renderProductSuggestions();
   } catch (err) {
     console.log(err);
   }
@@ -146,7 +151,6 @@ async function submitStock() {
     document.getElementById("stockProduct").value = "";
     document.getElementById("stockQty").value = "";
 
-    await loadDashboard();
     await loadStockProducts();
   } catch (err) {
     showMessage("stockAddResult", "⚠️ Failed to update stock.", "error");
@@ -299,7 +303,6 @@ ${result.confirmation}`;
     renderOrderItems();
 
     await loadDashboard();
-    await loadStockProducts();
   } catch (err) {
     showMessage("orderResult", "⚠️ Failed to save order.", "error");
   } finally {
@@ -353,35 +356,43 @@ async function loadReports() {
   showLoading("Loading reports...");
 
   try {
-    const today = await apiGet({ action: "report", type: "today" });
-    const month = await apiGet({ action: "report", type: "month" });
+    const result = await apiGet({ action: "dashboard" });
 
-    if (today.success) {
-      document.getElementById("todayDetail").innerText =
-        "$" + today.report.revenue;
-      document.getElementById("todayMeta").innerText =
-        `Orders: ${today.report.orderCount} • Units: ${today.report.unitsSold}`;
+    if (!result.success) {
+      document.getElementById("topProducts").innerHTML = "⚠️ Failed to load reports.";
+      return;
     }
 
-    if (month.success) {
-      document.getElementById("monthDetail").innerText =
-        "$" + month.report.revenue;
-      document.getElementById("monthMeta").innerText =
-        `Orders: ${month.report.orderCount} • Units: ${month.report.unitsSold}`;
+    const today = result.todayReport;
+    const month = result.monthReport;
 
-      const top = month.report.topProducts || [];
+    document.getElementById("todayDetail").innerText =
+      "$" + today.revenue;
 
-      if (!top.length) {
-        document.getElementById("topProducts").innerHTML = "No sales yet.";
-      } else {
-        document.getElementById("topProducts").innerHTML = top.slice(0, 5).map(item => `
-          <div class="list-item">
-            <span>${escapeHtml(item.product)}</span>
-            <strong>${item.qty}</strong>
-          </div>
-        `).join("");
-      }
+    document.getElementById("todayMeta").innerText =
+      `Orders: ${today.orderCount} • Units: ${today.unitsSold}`;
+
+    document.getElementById("monthDetail").innerText =
+      "$" + month.revenue;
+
+    document.getElementById("monthMeta").innerText =
+      `Orders: ${month.orderCount} • Units: ${month.unitsSold}`;
+
+    const top = month.topProducts || [];
+
+    if (!top.length) {
+      document.getElementById("topProducts").innerHTML = "No sales yet.";
+    } else {
+      document.getElementById("topProducts").innerHTML = top.slice(0, 5).map(item => `
+        <div class="list-item">
+          <span>${escapeHtml(item.product)}</span>
+          <strong>${item.qty}</strong>
+        </div>
+      `).join("");
     }
+
+    stockProducts = result.stock || [];
+    renderProductSuggestions();
   } catch (err) {
     document.getElementById("topProducts").innerHTML = "⚠️ Failed to load reports.";
   } finally {
