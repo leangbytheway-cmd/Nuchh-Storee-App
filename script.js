@@ -1,4 +1,4 @@
-const API_URL = "PASTE_YOUR_APPS_SCRIPT_API_URL_HERE";
+const API_URL = "https://script.google.com/macros/s/AKfycbwo6_xqTCQuxgE0YIYNDeICqdR1p0wf4XYB7mwHSkONx6YXASUWHlTmCdG12MnXxOIApQ/exec";
 
 let stockProducts = [];
 let orderItems = [];
