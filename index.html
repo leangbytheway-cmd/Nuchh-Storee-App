@@ -6,182 +6,243 @@
     name="viewport"
     content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
   />
-  <meta name="theme-color" content="#f4f4f4" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="Nuchh Storee App" />
 
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" href="icon-192.png">
+  <title>Business App</title>
 
-    <link rel="apple-touch-icon" href="icon-512.png">
-
-    <meta name="apple-mobile-web-app-title" content="Nuchh Storee App">
-    <meta name="theme-color" content="#f4f4f4">
-    
-  <title>Nuchh Storee App</title>
   <link rel="stylesheet" href="style.css" />
+
+  <link rel="icon" type="image/png" href="icon-192.png" />
+  <link rel="apple-touch-icon" href="icon-512.png" />
+  <link rel="manifest" href="manifest.json" />
+
+  <meta name="theme-color" content="#8fd3ff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Business App" />
 </head>
 
 <body>
-    <div id="loadingOverlay" class="loading-overlay">
-  <div class="loading-box">
-    <div class="spinner"></div>
-    <div id="loadingText">Loading...</div>
+  <div id="loadingOverlay" class="loading-overlay">
+    <div class="loading-box">
+      <div class="spinner"></div>
+      <div id="loadingText">Loading...</div>
+    </div>
   </div>
-</div>
-  <main class="app">
-    <header class="top">
-      <div>
-        <h1>Nuchh Storee App</h1>
-        <p>Orders, stock, and reports</p>
-      </div>
-    </header>
 
-    <section class="stats">
-      <div class="stat-card">
-        <span>Today Sales</span>
-        <strong id="todayRevenue">$0</strong>
-      </div>
+  <div class="app-shell">
+    <div class="app">
+      <header class="hero-card">
+        <div class="hero-top">
+          <div>
+            <p class="hero-kicker">Cute sales tracker ✨</p>
+            <h1>Business App</h1>
+            <p class="hero-sub">Track orders, stock, and reports in one place.</p>
+          </div>
 
-      <div class="stat-card">
-        <span>Month Sales</span>
-        <strong id="monthRevenue">$0</strong>
-      </div>
-    </section>
+          <div class="hero-badge">☁️</div>
+        </div>
 
-    <nav class="nav">
-      <button class="active" onclick="showPage('order', this)">Order</button>
-      <button onclick="showPage('stockAdd', this)">Add Stock</button>
-      <button onclick="showPage('stockView', this); loadStock();">Stock</button>
-      <button onclick="showPage('reports', this); loadReports();">Reports</button>
-      <button onclick="showPage('history', this); loadOrdersHistory();">History</button>
-    </nav>
+        <div class="dashboard">
+          <div class="stat-card">
+            <span>Today Sales</span>
+            <strong id="todayRevenue">$0</strong>
+          </div>
 
+          <div class="stat-card">
+            <span>Month Sales</span>
+            <strong id="monthRevenue">$0</strong>
+          </div>
+        </div>
+      </header>
+
+      <nav class="nav">
+        <button class="active" onclick="showPage('order', this)">Order</button>
+        <button onclick="showPage('stockAdd', this)">Add Stock</button>
+        <button onclick="showPage('stockView', this); loadStock();">Stock</button>
+        <button onclick="showPage('reports', this); loadReports();">Reports</button>
+        <button onclick="showPage('history', this); loadOrdersHistory();">History</button>
+      </nav>
+
+      <main>
         <section id="order" class="page active">
-    <div class="card">
-        <h2>Add Order</h2>
+          <div class="card">
+            <div class="section-head">
+              <div>
+                <h2>Add Order</h2>
+                <p>Create a new customer order</p>
+              </div>
+              <div class="section-icon">🛍️</div>
+            </div>
 
-        <label>Customer Name</label>
-        <input id="customer" placeholder="Dara" autocomplete="name" />
+            <label>Customer Name</label>
+            <input id="customer" placeholder="Dara" autocomplete="name" />
 
-        <label>Phone Number</label>
-        <input id="phone" placeholder="012345678" inputmode="tel" />
+            <label>Phone Number</label>
+            <input id="phone" placeholder="012345678" inputmode="tel" />
 
-        <label>Address</label>
-        <input id="address" placeholder="TK" />
+            <label>Address</label>
+            <input id="address" placeholder="TK" />
 
-        <label>Delivery Method</label>
-        <select id="delivery">
-        <option value="D2D">D2D</option>
-        <option value="GRAB">GRAB</option>
-        <option value="VET">VET</option>
-        <option value="J&T">J&T</option>
-        <option value="Capitol">Capitol</option>
-        <option value="Walk-In">Walk-In</option>
-        </select>
+            <label>Delivery Method</label>
+            <select id="delivery">
+              <option value="D2D">D2D</option>
+              <option value="VET">VET</option>
+              <option value="J&T">J&T</option>
+              <option value="Capitol">Capitol</option>
+              <option value="Walk-In">Walk-In</option>
+            </select>
 
-        <hr class="divider" />
+            <label>Delivery Fee</label>
+            <input id="deliveryFee" type="number" placeholder="0" inputmode="decimal" />
 
-        <h3>Add Product</h3>
+            <hr class="divider" />
 
-        <label>Product</label>
-        <input id="itemProduct" list="productList" placeholder="Choose product" />
+            <div class="mini-section-title">
+              <span>➕ Add Product</span>
+            </div>
 
-        <datalist id="productList"></datalist>
+            <label>Product</label>
+            <input id="itemProduct" list="productList" placeholder="Choose product" />
+            <datalist id="productList"></datalist>
 
-        <div class="grid-2">
-        <div>
-            <label>Qty</label>
-            <input id="itemQty" type="number" placeholder="2" inputmode="numeric" />
-        </div>
+            <div class="grid-2">
+              <div>
+                <label>Qty</label>
+                <input id="itemQty" type="number" placeholder="2" inputmode="numeric" />
+              </div>
 
-        <div>
-            <label>Unit Price</label>
-            <input id="itemPrice" type="number" placeholder="15" inputmode="decimal" />
-        </div>
-        </div>
+              <div>
+                <label>Subtotal</label>
+                <input id="itemSubtotal" type="number" placeholder="20" inputmode="decimal" />
+              </div>
+            </div>
 
-        <button class="secondary-btn" onclick="addItemToOrder()">Add Product</button>
+            <button class="secondary-btn" onclick="addItemToOrder()">Add Product</button>
 
-        <div class="order-summary">
-        <h3>Order Items</h3>
-        <div id="orderItemsList" class="list">No products added yet.</div>
+            <div class="order-summary">
+              <h3>Order Items</h3>
 
-        <div class="order-total">
-            <span>Total</span>
-            <strong id="orderTotal">$0</strong>
-        </div>
-        </div>
+              <div id="orderItemsList" class="list">
+                No products added yet.
+              </div>
 
-        <button class="primary" onclick="submitOrder()">Submit Order</button>
+              <div class="order-total">
+                <span>Gross Total</span>
+                <strong id="grossTotal">$0</strong>
+              </div>
 
-        <div id="orderResult"></div>
+              <div class="order-total muted-total">
+                <span>Delivery Fee</span>
+                <strong id="deliveryFeePreview">$0</strong>
+              </div>
+
+              <div class="order-total net-total">
+                <span>Net Total</span>
+                <strong id="netTotal">$0</strong>
+              </div>
+            </div>
+
+            <button class="primary" onclick="submitOrder()">Submit Order</button>
+
+            <div id="orderResult"></div>
+          </div>
+        </section>
+
+        <section id="stockAdd" class="page">
+          <div class="card">
+            <div class="section-head">
+              <div>
+                <h2>Add Stock</h2>
+                <p>Update current product quantity</p>
+              </div>
+              <div class="section-icon">📦</div>
+            </div>
+
+            <label>Product</label>
+            <input
+              id="stockProduct"
+              list="stockProductList"
+              placeholder="Choose existing or type new product"
+            />
+            <datalist id="stockProductList"></datalist>
+
+            <label>Quantity to Add</label>
+            <input id="stockQty" type="number" placeholder="50" inputmode="numeric" />
+
+            <button class="primary" onclick="submitStock()">Update Stock</button>
+
+            <div id="stockAddResult"></div>
+          </div>
+        </section>
+
+        <section id="stockView" class="page">
+          <div class="card">
+            <div class="section-head">
+              <div>
+                <h2>Current Stock</h2>
+                <p>Available products in your inventory</p>
+              </div>
+              <div class="section-icon">🧴</div>
+            </div>
+
+            <div id="stockList" class="list">Tap Stock to load.</div>
+          </div>
+        </section>
+
+        <section id="reports" class="page">
+          <div class="card">
+            <div class="section-head">
+              <div>
+                <h2>Reports</h2>
+                <p>Sales performance overview</p>
+              </div>
+              <div class="section-icon">📊</div>
+            </div>
+
+            <div class="report-grid">
+              <div class="report-card">
+                <span>Today Gross</span>
+                <strong id="todayDetail">$0</strong>
+                <small id="todayMeta">Orders: 0 • Units: 0 • Delivery: $0 • Net: $0</small>
+              </div>
+
+              <div class="report-card">
+                <span>Month Gross</span>
+                <strong id="monthDetail">$0</strong>
+                <small id="monthMeta">Orders: 0 • Units: 0 • Delivery: $0 • Net: $0</small>
+              </div>
+            </div>
+
+            <h3>Top Products This Month</h3>
+            <div id="topProducts" class="list">No sales yet.</div>
+          </div>
+        </section>
+
+        <section id="history" class="page">
+          <div class="card">
+            <div class="section-head">
+              <div>
+                <h2>Order History</h2>
+                <p>Search and manage past orders</p>
+              </div>
+              <div class="section-icon">🧾</div>
+            </div>
+
+            <input
+              id="historySearch"
+              placeholder="Search order, customer, phone..."
+              oninput="filterHistoryTyping()"
+            />
+
+            <button class="secondary-btn" onclick="loadOrdersHistory()">Refresh History</button>
+
+            <div id="historyResult" class="history-list">
+              Tap History to load.
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
-    </section>
-
-    <section id="stockAdd" class="page">
-  <div class="card">
-    <h2>Add Stock</h2>
-
-    <label>Product</label>
-    <input id="stockProduct" placeholder="HoneyA" />
-
-    <label>Quantity to Add</label>
-    <input id="stockQty" type="number" placeholder="50" inputmode="numeric" />
-
-    <button class="primary" onclick="submitStock()">Update Stock</button>
-
-    <div id="stockAddResult"></div>
   </div>
-</section>
-
-    <section id="stockView" class="page">
-      <div class="card">
-        <h2>Current Stock</h2>
-        <div id="stockList" class="list">Tap Stock to refresh.</div>
-      </div>
-    </section>
-
-    <section id="reports" class="page">
-      <div class="card">
-        <h2>Reports</h2>
-
-        <div class="report-box">
-          <span>Today</span>
-          <strong id="todayDetail">$0</strong>
-          <p id="todayMeta">Orders: 0 • Units: 0</p>
-        </div>
-
-        <div class="report-box">
-          <span>This Month</span>
-          <strong id="monthDetail">$0</strong>
-          <p id="monthMeta">Orders: 0 • Units: 0</p>
-        </div>
-
-        <h3>Top Products</h3>
-        <div id="topProducts" class="list"></div>
-      </div>
-    </section>
-
-    <section id="history" class="page">
-  <div class="card">
-    <h2>Order History</h2>
-
-    <label>Search Order</label>
-    <input
-      id="historySearch"
-      placeholder="Search name, phone, order ID..."
-      oninput="filterHistoryTyping()"
-    />
-
-    <button class="primary" onclick="loadOrdersHistory()">Refresh History</button>
-
-    <div id="historyResult" class="history-list">
-      Loading orders...
-    </div>
-  </div>
-</section>
-  </main>
 
   <script src="script.js"></script>
 </body>

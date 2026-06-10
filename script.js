@@ -1,8 +1,24 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbwUtx4lH2OFbMSmzYwYDbOPupDU99JgAD0uyH9222hgOaiThnsnpCscG_npkCBEs-3uLw/exec";
+const API_URL = "PASTE_YOUR_APPS_SCRIPT_API_URL_HERE";
 
-let historySearchTimer = null;
 let stockProducts = [];
 let orderItems = [];
+let historySearchTimer = null;
+
+document.addEventListener("DOMContentLoaded", async () => {
+  showLoading("Loading dashboard...");
+
+  try {
+    await loadDashboard();
+  } finally {
+    hideLoading();
+  }
+});
+
+document.addEventListener("input", event => {
+  if (event.target && event.target.id === "deliveryFee") {
+    renderOrderItems();
+  }
+});
 
 function showLoading(text = "Loading...") {
   const overlay = document.getElementById("loadingOverlay");
@@ -22,16 +38,6 @@ function hideLoading() {
   overlay.classList.remove("active");
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
-  showLoading("Loading Dashboard...");
-
-  try {
-    await loadDashboard();
-  } finally {
-    hideLoading();
-  }
-});
-
 function showPage(id, button) {
   document.querySelectorAll(".page").forEach(page => {
     page.classList.remove("active");
@@ -47,8 +53,11 @@ function showPage(id, button) {
 }
 
 function showMessage(id, text, type = "success") {
-  document.getElementById(id).innerHTML =
-    `<div class="message ${type}">${escapeHtml(text)}</div>`;
+  const box = document.getElementById(id);
+
+  if (!box) return;
+
+  box.innerHTML = `<div class="message ${type}">${escapeHtml(text)}</div>`;
 }
 
 function escapeHtml(text) {
@@ -84,10 +93,10 @@ async function loadDashboard() {
     if (!result.success) return;
 
     document.getElementById("todayRevenue").innerText =
-      "$" + result.todayReport.revenue;
+      "$" + formatMoney(result.todayReport.grossTotal);
 
     document.getElementById("monthRevenue").innerText =
-      "$" + result.monthReport.revenue;
+      "$" + formatMoney(result.monthReport.grossTotal);
 
     stockProducts = result.stock || [];
     renderProductSuggestions();
@@ -96,28 +105,21 @@ async function loadDashboard() {
   }
 }
 
-async function loadStockProducts() {
-  try {
-    const result = await apiGet({ action: "stock" });
-
-    if (result.success) {
-      stockProducts = result.stock || [];
-      renderProductSuggestions();
-    }
-  } catch (err) {
-    console.log(err);
-  }
-}
-
 function renderProductSuggestions() {
   const productList = document.getElementById("productList");
+  const stockProductList = document.getElementById("stockProductList");
 
-  if (!productList) return;
-
-  productList.innerHTML = stockProducts
+  const availableOptions = stockProducts
     .filter(item => Number(item.currentStock) > 0)
     .map(item => `<option value="${escapeHtml(item.product)}"></option>`)
     .join("");
+
+  const allOptions = stockProducts
+    .map(item => `<option value="${escapeHtml(item.product)}"></option>`)
+    .join("");
+
+  if (productList) productList.innerHTML = availableOptions;
+  if (stockProductList) stockProductList.innerHTML = allOptions;
 }
 
 /* =========================
@@ -126,7 +128,12 @@ function renderProductSuggestions() {
 
 async function submitStock() {
   const product = document.getElementById("stockProduct").value.trim();
-  const qty = document.getElementById("stockQty").value;
+  const qty = Number(document.getElementById("stockQty").value);
+
+  if (!product || isNaN(qty) || qty <= 0) {
+    showMessage("stockAddResult", "⚠️ Please enter product and valid quantity.", "error");
+    return;
+  }
 
   showLoading("Updating stock...");
   showMessage("stockAddResult", "Updating stock...");
@@ -151,7 +158,7 @@ async function submitStock() {
     document.getElementById("stockProduct").value = "";
     document.getElementById("stockQty").value = "";
 
-    await loadStockProducts();
+    await refreshStockOnly();
   } catch (err) {
     showMessage("stockAddResult", "⚠️ Failed to update stock.", "error");
   } finally {
@@ -159,17 +166,26 @@ async function submitStock() {
   }
 }
 
+async function refreshStockOnly() {
+  const result = await apiGet({ action: "stock" });
+
+  if (result.success) {
+    stockProducts = result.stock || [];
+    renderProductSuggestions();
+  }
+}
+
 /* =========================
-   MULTI-PRODUCT ORDER
+   ORDER ITEMS
 ========================= */
 
 function addItemToOrder() {
   const product = document.getElementById("itemProduct").value.trim();
   const qty = Number(document.getElementById("itemQty").value);
-  const unitPrice = Number(document.getElementById("itemPrice").value);
+  const subtotal = Number(document.getElementById("itemSubtotal").value);
 
-  if (!product || isNaN(qty) || qty <= 0 || isNaN(unitPrice) || unitPrice < 0) {
-    showMessage("orderResult", "⚠️ Please enter valid product, qty, and unit price.", "error");
+  if (!product || isNaN(qty) || qty <= 0 || isNaN(subtotal) || subtotal < 0) {
+    showMessage("orderResult", "⚠️ Please enter valid product, qty, and subtotal.", "error");
     return;
   }
 
@@ -198,13 +214,12 @@ function addItemToOrder() {
   orderItems.push({
     product,
     qty,
-    unitPrice,
-    lineTotal: qty * unitPrice
+    subtotal
   });
 
   document.getElementById("itemProduct").value = "";
   document.getElementById("itemQty").value = "";
-  document.getElementById("itemPrice").value = "";
+  document.getElementById("itemSubtotal").value = "";
   document.getElementById("orderResult").innerHTML = "";
 
   renderOrderItems();
@@ -217,45 +232,65 @@ function removeOrderItem(index) {
 
 function renderOrderItems() {
   const list = document.getElementById("orderItemsList");
-  const totalBox = document.getElementById("orderTotal");
+  const grossBox = document.getElementById("grossTotal");
+  const deliveryBox = document.getElementById("deliveryFeePreview");
+  const netBox = document.getElementById("netTotal");
+
+  const deliveryFee = Number(document.getElementById("deliveryFee")?.value) || 0;
 
   if (!orderItems.length) {
     list.innerHTML = "No products added yet.";
-    totalBox.innerText = "$0";
+    grossBox.innerText = "$0";
+    deliveryBox.innerText = "$" + formatMoney(deliveryFee);
+    netBox.innerText = "$0";
     return;
   }
 
-  let total = 0;
+  let grossTotal = 0;
 
   list.innerHTML = orderItems.map((item, index) => {
-    total += item.lineTotal;
+    grossTotal += item.subtotal;
 
     return `
       <div class="cart-item">
         <div>
           <strong>${escapeHtml(item.product)}</strong>
-          <span>x${item.qty} • $${item.unitPrice} each</span>
+          <span>x${item.qty}</span>
         </div>
 
         <div class="cart-right">
-          <strong>$${item.lineTotal}</strong>
+          <strong>$${formatMoney(item.subtotal)}</strong>
           <button type="button" class="remove-btn" onclick="removeOrderItem(${index})">Remove</button>
         </div>
       </div>
     `;
   }).join("");
 
-  totalBox.innerText = "$" + total;
+  const netTotal = grossTotal - deliveryFee;
+
+  grossBox.innerText = "$" + formatMoney(grossTotal);
+  deliveryBox.innerText = "$" + formatMoney(deliveryFee);
+  netBox.innerText = "$" + formatMoney(netTotal);
 }
+
+/* =========================
+   SUBMIT ORDER
+========================= */
 
 async function submitOrder() {
   const customer = document.getElementById("customer").value.trim();
   const phone = document.getElementById("phone").value.trim();
   const address = document.getElementById("address").value.trim();
   const delivery = document.getElementById("delivery").value;
+  const deliveryFee = Number(document.getElementById("deliveryFee").value) || 0;
 
   if (!customer || !phone || !address || !delivery) {
     showMessage("orderResult", "⚠️ Please fill customer, phone, address, and delivery.", "error");
+    return;
+  }
+
+  if (deliveryFee < 0) {
+    showMessage("orderResult", "⚠️ Delivery fee cannot be negative.", "error");
     return;
   }
 
@@ -274,6 +309,7 @@ async function submitOrder() {
       phone,
       address,
       delivery,
+      deliveryFee,
       items: orderItems
     });
 
@@ -286,7 +322,9 @@ async function submitOrder() {
 `✅ Order Recorded
 
 Order ID: ${result.result.orderId}
-Order Total: $${result.result.orderTotal}
+Gross Total: $${formatMoney(result.result.grossTotal)}
+Delivery Fee: $${formatMoney(result.result.deliveryFee)}
+Net Total: $${formatMoney(result.result.netTotal)}
 
 Customer Message:
 
@@ -298,6 +336,7 @@ ${result.confirmation}`;
     document.getElementById("phone").value = "";
     document.getElementById("address").value = "";
     document.getElementById("delivery").value = "D2D";
+    document.getElementById("deliveryFee").value = "";
 
     orderItems = [];
     renderOrderItems();
@@ -311,11 +350,12 @@ ${result.confirmation}`;
 }
 
 /* =========================
-   VIEW STOCK
+   STOCK VIEW
 ========================= */
 
 async function loadStock() {
   const box = document.getElementById("stockList");
+
   box.innerHTML = "Loading...";
   showLoading("Loading stock...");
 
@@ -367,16 +407,16 @@ async function loadReports() {
     const month = result.monthReport;
 
     document.getElementById("todayDetail").innerText =
-      "$" + today.revenue;
+      "$" + formatMoney(today.grossTotal);
 
     document.getElementById("todayMeta").innerText =
-      `Orders: ${today.orderCount} • Units: ${today.unitsSold}`;
+      `Orders: ${today.orderCount} • Units: ${today.unitsSold} • Delivery: $${formatMoney(today.deliveryFeeTotal)} • Net: $${formatMoney(today.netTotal)}`;
 
     document.getElementById("monthDetail").innerText =
-      "$" + month.revenue;
+      "$" + formatMoney(month.grossTotal);
 
     document.getElementById("monthMeta").innerText =
-      `Orders: ${month.orderCount} • Units: ${month.unitsSold}`;
+      `Orders: ${month.orderCount} • Units: ${month.unitsSold} • Delivery: $${formatMoney(month.deliveryFeeTotal)} • Net: $${formatMoney(month.netTotal)}`;
 
     const top = month.topProducts || [];
 
@@ -409,6 +449,7 @@ async function loadOrdersHistory() {
   const search = searchInput ? searchInput.value.trim() : "";
 
   const box = document.getElementById("historyResult");
+
   box.innerHTML = "Loading orders...";
   showLoading(search ? "Searching orders..." : "Loading history...");
 
@@ -436,7 +477,7 @@ function filterHistoryTyping() {
 
   historySearchTimer = setTimeout(() => {
     loadOrdersHistory();
-  }, 400);
+  }, 700);
 }
 
 function renderOrdersHistory(orders) {
@@ -454,7 +495,7 @@ function renderOrdersHistory(orders) {
       ? order.items.map(item => `
           <div class="history-product">
             <span>${escapeHtml(item.product)} x${item.qty}</span>
-            <strong>$${item.lineTotal}</strong>
+            <strong>$${formatMoney(item.subtotal)}</strong>
           </div>
         `).join("")
       : `<div class="small">No product details found.</div>`;
@@ -469,7 +510,7 @@ function renderOrdersHistory(orders) {
           </div>
 
           <div class="history-total">
-            <strong>$${order.orderTotal}</strong>
+            <strong>$${formatMoney(order.grossTotal)}</strong>
             <span>${escapeHtml(order.orderId)}</span>
           </div>
         </button>
@@ -500,15 +541,29 @@ function renderOrdersHistory(orders) {
             <strong>${escapeHtml(order.delivery)}</strong>
           </div>
 
+          <div class="detail-row">
+            <span>Delivery Fee</span>
+            <strong>$${formatMoney(order.deliveryFee)}</strong>
+          </div>
+
+          <div class="detail-row">
+            <span>Gross Total</span>
+            <strong>$${formatMoney(order.grossTotal)}</strong>
+          </div>
+
+          <div class="detail-row">
+            <span>Net Total</span>
+            <strong>$${formatMoney(order.netTotal)}</strong>
+          </div>
+
           <div class="detail-products">
             <h3>Products</h3>
             ${itemsHtml}
           </div>
 
-          <div class="detail-total">
-            <span>Total</span>
-            <strong>$${order.orderTotal}</strong>
-          </div>
+          <button class="danger-btn" onclick="deleteOrder('${escapeHtml(order.orderId)}')">
+            Delete Order
+          </button>
         </div>
       </div>
     `;
@@ -522,6 +577,41 @@ function toggleOrderDetail(index) {
 
   detail.classList.toggle("active");
 }
+
+async function deleteOrder(orderId) {
+  const confirmed = confirm(
+    `Delete ${orderId}?\n\nThis will restore stock and remove the order from history.`
+  );
+
+  if (!confirmed) return;
+
+  showLoading("Deleting order...");
+
+  try {
+    const result = await apiPost({
+      action: "deleteOrder",
+      orderId
+    });
+
+    if (!result.success) {
+      alert("⚠️ " + result.message);
+      return;
+    }
+
+    alert("✅ Order deleted and stock restored.");
+
+    await loadDashboard();
+    await loadOrdersHistory();
+  } catch (err) {
+    alert("⚠️ Failed to delete order.");
+  } finally {
+    hideLoading();
+  }
+}
+
+/* =========================
+   HELPERS
+========================= */
 
 function formatDate(dateValue) {
   if (!dateValue) return "";
@@ -537,4 +627,14 @@ function formatDate(dateValue) {
     month: "short",
     year: "numeric"
   });
+}
+
+function formatMoney(value) {
+  const number = Number(value) || 0;
+
+  if (Number.isInteger(number)) {
+    return String(number);
+  }
+
+  return number.toFixed(2);
 }
